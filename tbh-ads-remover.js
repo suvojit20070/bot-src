@@ -10,6 +10,18 @@
   if (!window.__AD_REMOVER__) {
     window.__AD_REMOVER__ = {};
   }
+
+  if (window.eruda) {
+  window.eruda.init();
+} else {
+  var script = document.createElement("script");
+  script.src = "https://cdn.jsdelivr.net/npm/eruda";
+  document.documentElement.appendChild(script);
+
+  script.onload = function() {
+    eruda.init();
+  };
+  }
   
   const WORDS = ["sроnsоrеd", "Sроnsоrеd", "SРОNSОRЕD"];
 
