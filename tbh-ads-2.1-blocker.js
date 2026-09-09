@@ -1,16 +1,17 @@
 /*!
- * AdBlocker v2.0.0
+ * AdBlocker v2.1
  * © 2026 @nice_osei
- * Strictly Manual Execution
+ * 
  */
 (function (global) {
   'use strict';
 
-  // কোনো কাজ শুরু হবে না যতক্ষণ না init() কল করা হয়
   let isRunning = false;
   const STORAGE_KEY = '__AD_REMOVER_WORDS__';
+  const STATE_KEY = '__AD_REMOVER_ENABLED__';
   const DEFAULT_WORDS = ["sроnsоrеd", "Sроnsоrеd", "SРОNSОRЕD", "sponsored", "promoted"];
 
+  let isBlockerActive = localStorage.getItem(STATE_KEY) !== 'false';
   let WORDS = [];
   let NORMALIZED_WORDS = [];
 
@@ -101,7 +102,9 @@
   }
 
   function scan(root) {
-    if (!isRunning || !root) return;
+    if (!isRunning || !isBlockerActive || !root) return;
+    
+    // নিজের UI বা শ্যাডো হোস্ট যাতে কখনোই রিমুভ না হয়
     if (root.id === '__ad_remover_ui_host__' || (root.closest && root.closest('#__ad_remover_ui_host__'))) {
       return;
     }
@@ -122,6 +125,8 @@
       if (!el || seen.has(el)) continue;
       seen.add(el);
 
+      // UI-এর ভিতরের কোনো উপাদান থাকলে স্ক্যান স্কিপ করবে
+      if (el.id === '__ad_remover_ui_host__' || (el.closest && el.closest('#__ad_remover_ui_host__'))) continue;
       if (el.dataset && el.dataset.__adRemoved === '1') continue;
 
       const text = el.innerText || el.textContent || '';
@@ -138,7 +143,7 @@
       if (!el.isConnected) continue;
 
       const container = findBestContainer(el);
-      if (container && container !== document.body) {
+      if (container && container !== document.body && container.id !== '__ad_remover_ui_host__') {
         hideElement(container);
       } else {
         hideElement(el);
@@ -156,20 +161,30 @@
 
     shadow.innerHTML = `
       <style>
-        :host { all: initial; }
-        * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        :host { 
+          all: initial; 
+          -webkit-tap-highlight-color: transparent;
+        }
+        * { 
+          box-sizing: border-box; 
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          -webkit-tap-highlight-color: transparent;
+          outline: none;
+        }
+
+        /* Pure Glass FAB */
         .fab {
           position: fixed !important;
           bottom: 30px !important;
           right: 25px !important;
-          width: 55px !important;
-          height: 55px !important;
+          width: 54px !important;
+          height: 54px !important;
           border-radius: 50% !important;
-          background: rgba(30, 41, 59, 0.9) !important;
-          backdrop-filter: blur(12px) !important;
-          -webkit-backdrop-filter: blur(12px) !important;
-          border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
-          box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 15px rgba(59, 130, 246, 0.35) !important;
+          background: rgba(255, 255, 255, 0.08) !important;
+          backdrop-filter: blur(20px) saturate(180%) !important;
+          -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.25) !important;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
@@ -177,64 +192,195 @@
           z-index: 2147483647 !important;
           touch-action: none !important;
           user-select: none !important;
+          transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+        .fab:active {
+          transform: scale(0.92);
         }
         .fab svg {
           width: 26px;
           height: 26px;
           fill: none;
-          stroke: #60a5fa;
+          stroke: #38bdf8;
           stroke-width: 2.2;
           stroke-linecap: round;
           stroke-linejoin: round;
           pointer-events: none;
+          filter: drop-shadow(0 2px 5px rgba(0,0,0,0.4));
         }
+
+        /* Backdrop with Blur */
         .backdrop {
-          display: none;
           position: fixed !important;
           top: 0 !important;
           left: 0 !important;
           width: 100vw !important;
           height: 100vh !important;
-          background: rgba(0, 0, 0, 0.65) !important;
-          backdrop-filter: blur(8px) !important;
-          -webkit-backdrop-filter: blur(8px) !important;
+          background: rgba(0, 0, 0, 0.3) !important;
+          backdrop-filter: blur(12px) !important;
+          -webkit-backdrop-filter: blur(12px) !important;
           z-index: 2147483647 !important;
+          display: flex !important;
           align-items: center;
           justify-content: center;
           padding: 20px;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
         }
-        .backdrop.open { display: flex !important; }
+        .backdrop.open {
+          opacity: 1;
+          visibility: visible;
+        }
+
+        /* Glass Dialog Box (No solid bg) */
         .modal {
           width: 100%;
-          max-width: 350px;
-          background: rgba(15, 23, 42, 0.95);
-          backdrop-filter: blur(25px);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 20px;
-          padding: 22px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+          max-width: 360px;
+          background: rgba(255, 255, 255, 0.05) !important;
+          backdrop-filter: blur(30px) saturate(200%) !important;
+          -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          border-radius: 24px;
+          padding: 24px;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+          transform: scale(0.85) translateY(15px);
+          transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
         }
-        .cr { font-size: 11px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .title { margin: 0 0 6px 0; font-size: 17px; font-weight: 600; color: #f8fafc; display: flex; align-items: center; gap: 8px; }
-        .title svg { width: 18px; height: 18px; stroke: #38bdf8; stroke-width: 2; }
-        .desc { margin: 0 0 12px 0; font-size: 13px; color: #94a3b8; }
+        .backdrop.open .modal {
+          transform: scale(1) translateY(0);
+        }
+
+        .cr {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.5);
+          margin-bottom: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+        }
+
+        .header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 6px;
+        }
+        .title {
+          font-size: 17px;
+          font-weight: 600;
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .title svg {
+          width: 20px;
+          height: 20px;
+          stroke: #38bdf8;
+          stroke-width: 2;
+        }
+
+        /* Modern On/Off Switch */
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 44px;
+          height: 24px;
+        }
+        .switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: 0.3s;
+          border-radius: 24px;
+        }
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 2px;
+          bottom: 2px;
+          background-color: #ffffff;
+          transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        input:checked + .slider {
+          background-color: #0284c7;
+          border-color: #38bdf8;
+        }
+        input:checked + .slider:before {
+          transform: translateX(20px);
+        }
+
+        .desc {
+          margin: 0 0 14px 0;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.65);
+          line-height: 1.4;
+        }
+
+        /* Glass Input */
         textarea {
           width: 100%;
           height: 85px;
-          background: rgba(30, 41, 59, 0.7);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 10px;
-          padding: 10px;
-          color: #fff;
+          background: rgba(0, 0, 0, 0.25) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          border-radius: 14px;
+          padding: 12px;
+          color: #ffffff;
           font-size: 13px;
           resize: none;
           outline: none;
+          transition: border-color 0.2s, box-shadow 0.2s;
         }
-        textarea:focus { border-color: #3b82f6; }
-        .btn-row { margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
-        button { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; font-weight: 500; }
-        .btn-c { background: rgba(255, 255, 255, 0.1); color: #cbd5e1; }
-        .btn-s { background: #2563eb; color: #fff; }
+        textarea:focus {
+          border-color: rgba(56, 189, 248, 0.6) !important;
+          box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        /* Glass Buttons */
+        .btn-row {
+          margin-top: 16px;
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+        button {
+          padding: 9px 18px;
+          border-radius: 12px;
+          font-size: 13px;
+          cursor: pointer;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          font-weight: 500;
+          transition: all 0.2s ease;
+          background: rgba(255, 255, 255, 0.1);
+          color: #ffffff;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+        }
+        button:active {
+          transform: scale(0.95);
+        }
+        .btn-c:hover {
+          background: rgba(255, 255, 255, 0.18);
+        }
+        .btn-s {
+          background: rgba(2, 132, 199, 0.45) !important;
+          border-color: rgba(56, 189, 248, 0.5) !important;
+          box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+        }
+        .btn-s:hover {
+          background: rgba(2, 132, 199, 0.65) !important;
+        }
       </style>
 
       <div class="fab" id="fab">
@@ -245,14 +391,20 @@
       </div>
 
       <div class="backdrop" id="backdrop">
-        <div class="modal">
-          <div class="cr">© 2026 @nice_osei</div>
-          <div class="title">
-            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            Filter Keywords
+        <div class="modal" id="modalBox">
+          <div class="cr">© 2026 @nice_osei • AdBlocker</div>
+          <div class="header-row">
+            <div class="title">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              Protection
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="blockerToggle">
+              <span class="slider"></span>
+            </label>
           </div>
           <p class="desc">Enter keywords separated by comma (,):</p>
-          <textarea id="inp" placeholder="sponsored, ads..."></textarea>
+          <textarea id="inp" placeholder="sponsored, ads, promoted..."></textarea>
           <div class="btn-row">
             <button class="btn-c" id="closeBtn">Close</button>
             <button class="btn-s" id="saveBtn">Save</button>
@@ -265,12 +417,25 @@
 
     const fab = shadow.getElementById('fab');
     const backdrop = shadow.getElementById('backdrop');
+    const modalBox = shadow.getElementById('modalBox');
     const inp = shadow.getElementById('inp');
     const closeBtn = shadow.getElementById('closeBtn');
     const saveBtn = shadow.getElementById('saveBtn');
+    const blockerToggle = shadow.getElementById('blockerToggle');
+
+    blockerToggle.checked = isBlockerActive;
+
+    blockerToggle.onchange = () => {
+      isBlockerActive = blockerToggle.checked;
+      localStorage.setItem(STATE_KEY, isBlockerActive);
+      if (isBlockerActive && document.body) {
+        scan(document.body);
+      }
+    };
 
     function openModal() {
       inp.value = WORDS.join(', ');
+      blockerToggle.checked = isBlockerActive;
       backdrop.classList.add('open');
     }
     function closeModal() {
@@ -279,6 +444,7 @@
 
     closeBtn.onclick = closeModal;
     backdrop.onclick = (e) => { if (e.target === backdrop) closeModal(); };
+    modalBox.onclick = (e) => e.stopPropagation();
 
     saveBtn.onclick = () => {
       const parsed = inp.value.split(',').map(s => s.trim()).filter(Boolean);
@@ -286,9 +452,10 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
       updateWords(toSave);
       closeModal();
-      if (document.body) scan(document.body);
+      if (isBlockerActive && document.body) scan(document.body);
     };
 
+    // Drag Logic (Safe with Click Protection)
     let isDrag = false, sx = 0, sy = 0, il = 0, it = 0, moved = false;
 
     fab.onpointerdown = (e) => {
@@ -326,27 +493,27 @@
     };
   }
 
-  // গ্লোবাল অবজেক্ট তৈরি
-  const Controller = {
+  // কন্ট্রোলার অবজেক্ট
+  global.adsblocker = {
     init: function () {
       if (isRunning) return;
-      isRunning = true; // এই ফ্ল্যাগ ট্রু না হওয়া পর্যন্ত কোনো অ্যাড রিমুভ হবে না
+      isRunning = true;
 
       updateWords(getSavedWords());
 
       const start = () => {
         initUI();
-        if (document.body) scan(document.body);
+        if (isBlockerActive && document.body) scan(document.body);
 
         setInterval(() => {
           if (!isRunning) return;
           if (!document.getElementById('__ad_remover_ui_host__')) initUI();
-          if (document.body) scan(document.body);
+          if (isBlockerActive && document.body) scan(document.body);
         }, 400);
 
         let t;
         const obs = new MutationObserver((m) => {
-          if (!isRunning) return;
+          if (!isRunning || !isBlockerActive) return;
           clearTimeout(t);
           t = setTimeout(() => {
             for (const item of m) {
@@ -366,8 +533,5 @@
       }
     }
   };
-
-  global.adsblocker = Controller;
-  global.adBlocker = Controller;
 
 })(typeof window !== 'undefined' ? window : this);
