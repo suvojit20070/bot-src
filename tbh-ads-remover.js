@@ -1,24 +1,16 @@
 /*!
- * AdBlocker v1.0.1
+ * AdBlocker v2.0.0
  * © 2026 @nice_osei
+ * Strictly Manual Execution
  */
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define([], factory);
-  } else if (typeof module === 'object' && module.exports) {
-    module.exports = factory();
-  } else {
-    const instance = factory();
-    root.adsblocker = instance;
-    root.adBlocker = instance;
-  }
-})(typeof window !== 'undefined' ? window : this, function () {
+(function (global) {
   'use strict';
 
+  // কোনো কাজ শুরু হবে না যতক্ষণ না init() কল করা হয়
+  let isRunning = false;
   const STORAGE_KEY = '__AD_REMOVER_WORDS__';
   const DEFAULT_WORDS = ["sроnsоrеd", "Sроnsоrеd", "SРОNSОRЕD", "sponsored", "promoted"];
 
-  let isInitialized = false;
   let WORDS = [];
   let NORMALIZED_WORDS = [];
 
@@ -74,9 +66,6 @@
     el.style.setProperty('display', 'none', 'important');
     el.style.setProperty('visibility', 'hidden', 'important');
     el.style.setProperty('height', '0', 'important');
-    el.style.setProperty('min-height', '0', 'important');
-    el.style.setProperty('max-height', '0', 'important');
-    el.style.setProperty('overflow', 'hidden', 'important');
     el.setAttribute('aria-hidden', 'true');
   }
 
@@ -112,7 +101,7 @@
   }
 
   function scan(root) {
-    if (!root) return;
+    if (!isRunning || !root) return;
     if (root.id === '__ad_remover_ui_host__' || (root.closest && root.closest('#__ad_remover_ui_host__'))) {
       return;
     }
@@ -157,7 +146,6 @@
     }
   }
 
-  // --- UI CREATION (DIRECT BODY MOUNT) ---
   function initUI() {
     if (document.getElementById('__ad_remover_ui_host__')) return;
 
@@ -168,14 +156,8 @@
 
     shadow.innerHTML = `
       <style>
-        :host {
-          all: initial;
-          position: static;
-        }
-        * {
-          box-sizing: border-box;
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
+        :host { all: initial; }
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         .fab {
           position: fixed !important;
           bottom: 30px !important;
@@ -183,12 +165,11 @@
           width: 55px !important;
           height: 55px !important;
           border-radius: 50% !important;
-          background: #1e293b !important;
-          background: rgba(30, 41, 59, 0.88) !important;
+          background: rgba(30, 41, 59, 0.9) !important;
           backdrop-filter: blur(12px) !important;
           -webkit-backdrop-filter: blur(12px) !important;
           border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
-          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(59, 130, 246, 0.35) !important;
+          box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 15px rgba(59, 130, 246, 0.35) !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
@@ -198,8 +179,8 @@
           user-select: none !important;
         }
         .fab svg {
-          width: 28px;
-          height: 28px;
+          width: 26px;
+          height: 26px;
           fill: none;
           stroke: #60a5fa;
           stroke-width: 2.2;
@@ -222,52 +203,21 @@
           justify-content: center;
           padding: 20px;
         }
-        .backdrop.open {
-          display: flex !important;
-        }
+        .backdrop.open { display: flex !important; }
         .modal {
           width: 100%;
           max-width: 350px;
           background: rgba(15, 23, 42, 0.95);
           backdrop-filter: blur(25px);
-          -webkit-backdrop-filter: blur(25px);
           border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 20px;
           padding: 22px;
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-          animation: pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        @keyframes pop {
-          0% { transform: scale(0.85); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        .cr {
-          font-size: 11px;
-          color: #64748b;
-          margin-bottom: 8px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        .title {
-          margin: 0 0 6px 0;
-          font-size: 17px;
-          font-weight: 600;
-          color: #f8fafc;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .title svg {
-          width: 18px;
-          height: 18px;
-          stroke: #38bdf8;
-          stroke-width: 2;
-        }
-        .desc {
-          margin: 0 0 12px 0;
-          font-size: 13px;
-          color: #94a3b8;
-        }
+        .cr { font-size: 11px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .title { margin: 0 0 6px 0; font-size: 17px; font-weight: 600; color: #f8fafc; display: flex; align-items: center; gap: 8px; }
+        .title svg { width: 18px; height: 18px; stroke: #38bdf8; stroke-width: 2; }
+        .desc { margin: 0 0 12px 0; font-size: 13px; color: #94a3b8; }
         textarea {
           width: 100%;
           height: 85px;
@@ -280,23 +230,9 @@
           resize: none;
           outline: none;
         }
-        textarea:focus {
-          border-color: #3b82f6;
-        }
-        .btn-row {
-          margin-top: 15px;
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-        }
-        button {
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-size: 13px;
-          cursor: pointer;
-          border: none;
-          font-weight: 500;
-        }
+        textarea:focus { border-color: #3b82f6; }
+        .btn-row { margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
+        button { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; font-weight: 500; }
         .btn-c { background: rgba(255, 255, 255, 0.1); color: #cbd5e1; }
         .btn-s { background: #2563eb; color: #fff; }
       </style>
@@ -353,7 +289,6 @@
       if (document.body) scan(document.body);
     };
 
-    // Simple Drag & Click
     let isDrag = false, sx = 0, sy = 0, il = 0, it = 0, moved = false;
 
     fab.onpointerdown = (e) => {
@@ -391,12 +326,11 @@
     };
   }
 
-  // --- CONTROLLER ---
-  return {
+  // গ্লোবাল অবজেক্ট তৈরি
+  const Controller = {
     init: function () {
-      if (isInitialized) return;
-      isInitialized = true;
-      console.log('[AdBlocker] Initialized manually.');
+      if (isRunning) return;
+      isRunning = true; // এই ফ্ল্যাগ ট্রু না হওয়া পর্যন্ত কোনো অ্যাড রিমুভ হবে না
 
       updateWords(getSavedWords());
 
@@ -405,12 +339,14 @@
         if (document.body) scan(document.body);
 
         setInterval(() => {
+          if (!isRunning) return;
           if (!document.getElementById('__ad_remover_ui_host__')) initUI();
           if (document.body) scan(document.body);
         }, 400);
 
         let t;
         const obs = new MutationObserver((m) => {
+          if (!isRunning) return;
           clearTimeout(t);
           t = setTimeout(() => {
             for (const item of m) {
@@ -430,4 +366,8 @@
       }
     }
   };
-});
+
+  global.adsblocker = Controller;
+  global.adBlocker = Controller;
+
+})(typeof window !== 'undefined' ? window : this);
