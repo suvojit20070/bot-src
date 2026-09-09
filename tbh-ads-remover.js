@@ -1,5 +1,6 @@
 (function() {
   'use strict';
+
 /*
  * © 2026 @nice_osei
  *
@@ -7,9 +8,15 @@
  * for a cleaner viewing experience and does not support or encourage
  * any illegal activity.
  */
+
+  if (window.adsblocker) {
+    return;
+  }
+
   if (!window.__AD_REMOVER__) {
     window.__AD_REMOVER__ = {};
   }
+
   console.log('[AD BLOCKER] Loaded by @nice_osei');
 
   const STORAGE_KEY = '__AD_REMOVER_WORDS__';
@@ -28,12 +35,10 @@
 
   let WORDS = getSavedWords();
 
-  // Unicode/look-alike characters normalize
   function normalize(str) {
     if (!str) return '';
     str = String(str).normalize('NFKC').toLowerCase();
 
-    // Common Cyrillic/Greek look-alikes
     const map = {
       'а':'a','А':'a',
       'е':'e','Е':'e',
@@ -53,7 +58,6 @@
       'н':'h','Н':'h',
       'д':'d','Д':'d',
       'г':'r','Г':'r',
-      'ј':'j','Ј':'j',
       'ο':'o','Ο':'o',
       'ι':'i','Ι':'i',
       'ν':'v','Ν':'v',
@@ -127,11 +131,9 @@
 
         let score = count * 100;
 
-        // Prefer visible reasonable-sized containers
         if (rect.width > 100 && rect.height > 50) score += 20;
         if (area < window.innerWidth * window.innerHeight * 0.9) score += 10;
 
-        // Prefer containers containing images/buttons
         if (current.querySelector('img')) score += 15;
         if (current.querySelector('button,a')) score += 10;
 
@@ -150,7 +152,10 @@
   function scan(root) {
     if (!root) return;
 
-    if (root.id === '__ad_remover_ui_host__' || (root.closest && root.closest('#__ad_remover_ui_host__'))) {
+    if (
+      root.id === '__ad_remover_ui_host__' ||
+      (root.closest && root.closest('#__ad_remover_ui_host__'))
+    ) {
       return;
     }
 
@@ -165,7 +170,6 @@
     }
 
     const candidates = [];
-
     const seen = new Set();
 
     for (const el of elements) {
@@ -179,9 +183,11 @@
 
       const count = matches(text);
 
-      // At least one ad word must match
       if (count > 0) {
-        candidates.push({el: el, count: count});
+        candidates.push({
+          el: el,
+          count: count
+        });
       }
     }
 
@@ -200,36 +206,32 @@
     }
   }
 
-  // --- DRAGGABLE FLOATING ICON & GLASS DIALOG UI ---
   function initUI() {
     if (document.getElementById('__ad_remover_ui_host__')) return;
 
     const host = document.createElement('div');
     host.id = '__ad_remover_ui_host__';
 
-    /*
-     * UI rendering fix:
-     * Keep the host completely independent from the page's
-     * normal layout and stacking contexts.
-     */
-    host.style.setProperty('position', 'fixed', 'important');
-    host.style.setProperty('left', '0', 'important');
-    host.style.setProperty('top', '0', 'important');
-    host.style.setProperty('width', '100vw', 'important');
-    host.style.setProperty('height', '100vh', 'important');
-    host.style.setProperty('margin', '0', 'important');
-    host.style.setProperty('padding', '0', 'important');
-    host.style.setProperty('border', '0', 'important');
-    host.style.setProperty('background', 'transparent', 'important');
-    host.style.setProperty('pointer-events', 'none', 'important');
-    host.style.setProperty('z-index', '2147483647', 'important');
-    host.style.setProperty('display', 'block', 'important');
-    host.style.setProperty('visibility', 'visible', 'important');
-    host.style.setProperty('opacity', '1', 'important');
-    host.style.setProperty('transform', 'none', 'important');
-    host.style.setProperty('contain', 'none', 'important');
+    host.style.position = 'fixed';
+    host.style.left = '0';
+    host.style.top = '0';
+    host.style.width = '100vw';
+    host.style.height = '100vh';
+    host.style.margin = '0';
+    host.style.padding = '0';
+    host.style.border = '0';
+    host.style.background = 'transparent';
+    host.style.pointerEvents = 'none';
+    host.style.zIndex = '2147483647';
+    host.style.display = 'block';
+    host.style.visibility = 'visible';
+    host.style.opacity = '1';
+    host.style.transform = 'none';
+    host.style.contain = 'none';
 
-    const shadow = host.attachShadow({ mode: 'open' });
+    const shadow = host.attachShadow({
+      mode: 'open'
+    });
 
     shadow.innerHTML = `
       <style>
@@ -484,14 +486,21 @@
       <div class="dialog-backdrop" id="backdrop">
         <div class="dialog-box" id="dialogBox">
           <div class="dialog-copyright">© 2026 @nice_osei • All Rights Reserved</div>
+
           <div class="dialog-header">
             <svg viewBox="0 0 24 24">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
+
             <h3>Filter Keywords</h3>
           </div>
-          <p class="dialog-desc">Enter words separated by comma (,):</p>
+
+          <p class="dialog-desc">
+            Enter words separated by comma (,):
+          </p>
+
           <textarea id="wordInput" placeholder="sponsored, ads, promoted..."></textarea>
+
           <div class="action-row">
             <button class="btn-close" id="closeBtn">Close</button>
             <button class="btn-save" id="saveBtn">Save</button>
@@ -500,7 +509,11 @@
       </div>
     `;
 
-    (document.body || document.documentElement).appendChild(host);
+    const target = document.documentElement || document.body;
+
+    if (target) {
+      target.appendChild(host);
+    }
 
     const fab = shadow.getElementById('fab');
     const backdrop = shadow.getElementById('backdrop');
@@ -545,7 +558,6 @@
       scan(document.body);
     };
 
-    // --- DRAG & MOVE LOGIC ---
     let isDragging = false;
     let startX = 0;
     let startY = 0;
@@ -567,7 +579,6 @@
       initialLeft = rect.left;
       initialTop = rect.top;
 
-      // Fix initial right/bottom styles to absolute positions
       fab.style.right = 'auto';
       fab.style.bottom = 'auto';
       fab.style.left = initialLeft + 'px';
@@ -593,7 +604,6 @@
       let nextX = initialLeft + dx;
       let nextY = initialTop + dy;
 
-      // Keep inside screen viewport
       const maxLeft = window.innerWidth - fab.offsetWidth - 10;
       const maxTop = window.innerHeight - fab.offsetHeight - 10;
 
@@ -612,7 +622,6 @@
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
 
-      // Open only on clean tap/click
       if (!moved) {
         openModal();
       }
@@ -657,10 +666,13 @@
 
   function init() {
     if (initialized) return;
+
     initialized = true;
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', start, {once:true});
+      document.addEventListener('DOMContentLoaded', start, {
+        once: true
+      });
     } else {
       start();
     }
