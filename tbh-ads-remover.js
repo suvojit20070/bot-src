@@ -12,11 +12,9 @@
   }
   console.log('[AD BLOCKER] Loaded by @nice_osei');
 
-  // ডিফল্ট কিওয়ার্ড তালিকা
-  const DEFAULT_WORDS = ["sроnsоrеd", "Sроnsоrеd", "SРОNSОRЕD"];
   const STORAGE_KEY = '__AD_REMOVER_WORDS__';
+  const DEFAULT_WORDS = ["sроnsоrеd", "Sроnsоrеd", "SРОNSОRЕD"];
 
-  // লোকাল স্টোরেজ থেকে শব্দ লোড করা
   function getSavedWords() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -24,14 +22,11 @@
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) {}
     return DEFAULT_WORDS;
   }
 
-  let currentWords = getSavedWords();
-  let NORMALIZED_WORDS = [];
+  let WORDS = getSavedWords();
 
   // Unicode/look-alike characters normalize
   function normalize(str) {
@@ -77,21 +72,20 @@
       .trim();
   }
 
-  function updateNormalizedWords() {
-    NORMALIZED_WORDS = currentWords
-      .map(normalize)
-      .filter(Boolean);
-  }
-  updateNormalizedWords();
+  let NORMALIZED_WORDS = WORDS
+    .map(normalize)
+    .filter(Boolean);
 
   function matches(text) {
     const value = normalize(text);
     if (!value) return 0;
 
     let count = 0;
+
     for (const word of NORMALIZED_WORDS) {
       if (value.includes(word)) count++;
     }
+
     return count;
   }
 
@@ -103,6 +97,7 @@
     if (el.dataset.__adRemoved === '1') return;
 
     el.dataset.__adRemoved = '1';
+
     el.style.setProperty('display', 'none', 'important');
     el.style.setProperty('visibility', 'hidden', 'important');
     el.style.setProperty('height', '0', 'important');
@@ -118,6 +113,7 @@
     let bestScore = 0;
 
     for (let level = 0; current && level < 8; level++) {
+
       if (current === document.body || current === document.documentElement) {
         break;
       }
@@ -125,13 +121,17 @@
       const text = current.innerText || current.textContent || '';
       const count = matches(text);
 
-      if (count >= 1) {
+      if (count >= 2) {
         const rect = current.getBoundingClientRect();
         const area = Math.max(1, rect.width * rect.height);
 
         let score = count * 100;
+
+        // Prefer visible reasonable-sized containers
         if (rect.width > 100 && rect.height > 50) score += 20;
         if (area < window.innerWidth * window.innerHeight * 0.9) score += 10;
+
+        // Prefer containers containing images/buttons
         if (current.querySelector('img')) score += 15;
         if (current.querySelector('button,a')) score += 10;
 
@@ -150,12 +150,12 @@
   function scan(root) {
     if (!root) return;
 
-    // আমাদের কাস্টম UI উপাদান ফিল্টার থেকে বাদ দেওয়া
-    if (root.id === '__ad_remover_ui_root__' || root.closest && root.closest('#__ad_remover_ui_root__')) {
+    if (root.id === '__ad_remover_ui_host__' || (root.closest && root.closest('#__ad_remover_ui_host__'))) {
       return;
     }
 
     const elements = [];
+
     if (root.nodeType === 1) elements.push(root);
 
     if (root.querySelectorAll) {
@@ -165,19 +165,21 @@
     }
 
     const candidates = [];
+
     const seen = new Set();
 
     for (const el of elements) {
       if (!el || seen.has(el)) continue;
       seen.add(el);
 
-      if (el.closest && el.closest('#__ad_remover_ui_root__')) continue;
       if (el.dataset.__adRemoved === '1') continue;
 
       const text = el.innerText || el.textContent || '';
       if (!text.trim()) continue;
 
       const count = matches(text);
+
+      // At least one ad word must match
       if (count > 0) {
         candidates.push({el: el, count: count});
       }
@@ -185,9 +187,11 @@
 
     for (const candidate of candidates) {
       const el = candidate.el;
+
       if (!el.isConnected) continue;
 
       const container = findBestContainer(el);
+
       if (container && container !== document.body) {
         hideElement(container);
       } else {
@@ -196,172 +200,354 @@
     }
   }
 
-  // --- UI তৈরি (Floating Button + Dialog) ---
-  function createUI() {
-    if (document.getElementById('__ad_remover_ui_root__')) return;
+  // --- DRAGGABLE FLOATING ICON & GLASS DIALOG UI ---
+  function initUI() {
+    if (document.getElementById('__ad_remover_ui_host__')) return;
 
-    const root = document.createElement('div');
-    root.id = '__ad_remover_ui_root__';
+    const host = document.createElement('div');
+    host.id = '__ad_remover_ui_host__';
+    host.style.position = 'fixed';
+    host.style.inset = '0';
+    host.style.pointerEvents = 'none';
+    host.style.zIndex = '2147483647';
 
-    // UI স্টাইল
-    const style = document.createElement('style');
-    style.textContent = `
-      #__ad_remover_fab__ {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        width: 50px;
-        height: 50px;
-        background: #111827;
-        color: #fff;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        z-index: 2147483647;
-        user-select: none;
-        transition: transform 0.2s ease;
-      }
-      #__ad_remover_fab__:hover {
-        transform: scale(1.08);
-      }
-      #__ad_remover_modal__ {
-        display: none;
-        position: fixed;
-        bottom: 85px;
-        right: 24px;
-        width: 320px;
-        background: #ffffff;
-        color: #1f2937;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-        border: 1px solid #e5e7eb;
-        padding: 16px;
-        z-index: 2147483647;
-        font-family: system-ui, -apple-system, sans-serif;
-      }
-      #__ad_remover_modal__ h3 {
-        margin: 0 0 8px 0;
-        font-size: 15px;
-        font-weight: 600;
-        color: #111827;
-      }
-      #__ad_remover_modal__ p {
-        margin: 0 0 10px 0;
-        font-size: 12px;
-        color: #6b7280;
-      }
-      #__ad_remover_modal__ textarea {
-        width: 100%;
-        box-sizing: border-box;
-        height: 75px;
-        padding: 8px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 13px;
-        resize: vertical;
-        outline: none;
-      }
-      #__ad_remover_modal__ textarea:focus {
-        border-color: #2563eb;
-      }
-      #__ad_remover_btn_group__ {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 10px;
-      }
-      #__ad_remover_modal__ button {
-        border: none;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 500;
-      }
-      #__ad_remover_save__ {
-        background: #2563eb;
-        color: #fff;
-      }
-      #__ad_remover_save__:hover {
-        background: #1d4ed8;
-      }
-      #__ad_remover_close__ {
-        background: #f3f4f6;
-        color: #4b5563;
-      }
-      #__ad_remover_close__:hover {
-        background: #e5e7eb;
-      }
-    `;
+    const shadow = host.attachShadow({ mode: 'open' });
 
-    // FAB Button
-    const fab = document.createElement('div');
-    fab.id = '__ad_remover_fab__';
-    fab.title = 'Ad Blocker Keywords';
-    fab.innerHTML = '🛡️';
+    shadow.innerHTML = `
+      <style>
+        * {
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
-    // Modal
-    const modal = document.createElement('div');
-    modal.id = '__ad_remover_modal__';
-    modal.innerHTML = `
-      <h3>Blocked Keywords</h3>
-      <p>শব্দগুলো কমা (,) দিয়ে লিখুন:</p>
-      <textarea id="__ad_remover_input__" placeholder="halo, hi, sponsored..."></textarea>
-      <div id="__ad_remover_btn_group__">
-        <button id="__ad_remover_close__">Cancel</button>
-        <button id="__ad_remover_save__">Save</button>
+        .fab-button {
+          pointer-events: auto;
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          background: rgba(30, 41, 59, 0.75);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(59, 130, 246, 0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: grab;
+          user-select: none;
+          touch-action: none;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .fab-button:active {
+          cursor: grabbing;
+        }
+
+        .fab-button svg {
+          width: 24px;
+          height: 24px;
+          fill: none;
+          stroke: #60a5fa;
+          stroke-width: 2;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+          pointer-events: none;
+        }
+
+        .dialog-backdrop {
+          pointer-events: auto;
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.55);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
+        }
+
+        .dialog-backdrop.active {
+          opacity: 1;
+          visibility: visible;
+        }
+
+        .dialog-box {
+          position: relative;
+          width: 100%;
+          max-width: 360px;
+          background: rgba(18, 24, 38, 0.85);
+          backdrop-filter: blur(28px) saturate(190%);
+          -webkit-backdrop-filter: blur(28px) saturate(190%);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 20px;
+          padding: 24px;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          transform: scale(0.85) translateY(20px);
+          transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+        }
+
+        .dialog-backdrop.active .dialog-box {
+          transform: scale(1) translateY(0);
+        }
+
+        .dialog-copyright {
+          font-size: 11px;
+          color: #64748b;
+          margin: 0 0 10px 0;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+        }
+
+        .dialog-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 6px;
+        }
+
+        .dialog-header svg {
+          width: 20px;
+          height: 20px;
+          stroke: #38bdf8;
+          stroke-width: 2;
+          fill: none;
+        }
+
+        .dialog-header h3 {
+          margin: 0;
+          font-size: 17px;
+          font-weight: 600;
+          color: #f8fafc;
+          letter-spacing: 0.3px;
+        }
+
+        .dialog-desc {
+          margin: 0 0 14px 0;
+          font-size: 13px;
+          color: #94a3b8;
+          line-height: 1.4;
+        }
+
+        textarea {
+          width: 100%;
+          height: 90px;
+          background: rgba(15, 23, 42, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 12px;
+          color: #f1f5f9;
+          font-size: 13px;
+          line-height: 1.5;
+          resize: none;
+          outline: none;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        textarea:focus {
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+
+        .action-row {
+          margin-top: 18px;
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+
+        button {
+          padding: 9px 18px;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: none;
+        }
+
+        .btn-close {
+          background: rgba(255, 255, 255, 0.08);
+          color: #cbd5e1;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .btn-close:hover {
+          background: rgba(255, 255, 255, 0.14);
+          color: #ffffff;
+        }
+
+        .btn-save {
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          color: #ffffff;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-save:hover {
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+          transform: translateY(-1px);
+        }
+
+        .btn-save:active {
+          transform: translateY(0);
+        }
+      </style>
+
+      <div class="fab-button" id="fab">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          <path d="m9 12 2 2 4-4"></path>
+        </svg>
+      </div>
+
+      <div class="dialog-backdrop" id="backdrop">
+        <div class="dialog-box" id="dialogBox">
+          <div class="dialog-copyright">© 2026 @nice_osei • All Rights Reserved</div>
+          <div class="dialog-header">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h3>Filter Keywords</h3>
+          </div>
+          <p class="dialog-desc">Enter words separated by comma (,):</p>
+          <textarea id="wordInput" placeholder="sponsored, ads, promoted..."></textarea>
+          <div class="action-row">
+            <button class="btn-close" id="closeBtn">Close</button>
+            <button class="btn-save" id="saveBtn">Save</button>
+          </div>
+        </div>
       </div>
     `;
 
-    root.appendChild(style);
-    root.appendChild(fab);
-    root.appendChild(modal);
-    document.body.appendChild(root);
+    (document.body || document.documentElement).appendChild(host);
 
-    const input = modal.querySelector('#__ad_remover_input__');
-    const saveBtn = modal.querySelector('#__ad_remover_save__');
-    const closeBtn = modal.querySelector('#__ad_remover_close__');
+    const fab = shadow.getElementById('fab');
+    const backdrop = shadow.getElementById('backdrop');
+    const dialogBox = shadow.getElementById('dialogBox');
+    const textarea = shadow.getElementById('wordInput');
+    const saveBtn = shadow.getElementById('saveBtn');
+    const closeBtn = shadow.getElementById('closeBtn');
 
-    // টগল ফাংশন
-    fab.addEventListener('click', function() {
-      const isVisible = modal.style.display === 'block';
-      if (!isVisible) {
-        input.value = currentWords.join(', ');
-        modal.style.display = 'block';
-      } else {
-        modal.style.display = 'none';
-      }
-    });
+    function openModal() {
+      textarea.value = WORDS.join(', ');
+      backdrop.classList.add('active');
+    }
 
-    closeBtn.addEventListener('click', function() {
-      modal.style.display = 'none';
-    });
+    function closeModal() {
+      backdrop.classList.remove('active');
+    }
 
-    // Save বাটনে ক্লিক করলে অ্যারে আকারে রূপান্তর এবং সেভ
-    saveBtn.addEventListener('click', function() {
-      const text = input.value;
+    closeBtn.onclick = closeModal;
+
+    backdrop.onclick = (e) => {
+      if (e.target === backdrop) closeModal();
+    };
+
+    dialogBox.onclick = (e) => {
+      e.stopPropagation();
+    };
+
+    saveBtn.onclick = function() {
+      const text = textarea.value;
       const parsedArray = text
         .split(',')
         .map(w => w.trim())
         .filter(w => w.length > 0);
 
-      currentWords = parsedArray.length > 0 ? parsedArray : DEFAULT_WORDS;
+      WORDS = parsedArray.length > 0 ? parsedArray : DEFAULT_WORDS;
 
-      // localStorage-এ JSON অ্যারে হিসেবে সংরক্ষণ
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentWords));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(WORDS));
+      NORMALIZED_WORDS = WORDS.map(normalize).filter(Boolean);
 
-      updateNormalizedWords();
-      modal.style.display = 'none';
+      closeModal();
       scan(document.body);
-    });
+    };
+
+    // --- DRAG & MOVE LOGIC ---
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+    let moved = false;
+
+    function onPointerDown(e) {
+      isDragging = true;
+      moved = false;
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      startX = clientX;
+      startY = clientY;
+
+      const rect = fab.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+
+      // Fix initial right/bottom styles to absolute positions
+      fab.style.right = 'auto';
+      fab.style.bottom = 'auto';
+      fab.style.left = initialLeft + 'px';
+      fab.style.top = initialTop + 'px';
+
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        moved = true;
+      }
+
+      let nextX = initialLeft + dx;
+      let nextY = initialTop + dy;
+
+      // Keep inside screen viewport
+      const maxLeft = window.innerWidth - fab.offsetWidth - 10;
+      const maxTop = window.innerHeight - fab.offsetHeight - 10;
+
+      nextX = Math.max(10, Math.min(nextX, maxLeft));
+      nextY = Math.max(10, Math.min(nextY, maxTop));
+
+      fab.style.left = nextX + 'px';
+      fab.style.top = nextY + 'px';
+    }
+
+    function onPointerUp(e) {
+      if (!isDragging) return;
+      isDragging = false;
+
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+
+      // Open only on clean tap/click
+      if (!moved) {
+        openModal();
+      }
+    }
+
+    fab.addEventListener('pointerdown', onPointerDown);
   }
 
   function start() {
-    createUI();
+    initUI();
     scan(document.body);
 
     setInterval(function() {
@@ -373,6 +559,7 @@
     }
 
     let timer = null;
+
     window.__AD_REMOVER__.observer = new MutationObserver(function(mutations) {
       if (timer) clearTimeout(timer);
 
