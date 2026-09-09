@@ -1,7 +1,6 @@
 /*!
- * AdBlocker v1.0.0
+ * AdBlocker v1.0.1
  * © 2026 @nice_osei
- * Fully Manual Init (No Auto-Run like Eruda)
  */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
@@ -9,11 +8,9 @@
   } else if (typeof module === 'object' && module.exports) {
     module.exports = factory();
   } else {
-    // window.adsblocker এবং window.adBlocker দুটোতেই অ্যাসাইন করা হলো যাতে বানান ভুলের ঝামেলা না থাকে
     const instance = factory();
     root.adsblocker = instance;
     root.adBlocker = instance;
-    // কোনো অটো-রান হবে না! ইউজার init() কল করলেই কেবল চালু হবে।
   }
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
@@ -24,8 +21,6 @@
   let isInitialized = false;
   let WORDS = [];
   let NORMALIZED_WORDS = [];
-  let observer = null;
-  let loopTimer = null;
 
   function getSavedWords() {
     try {
@@ -41,7 +36,6 @@
   function normalize(str) {
     if (!str) return '';
     str = String(str).normalize('NFKC').toLowerCase();
-
     const map = {
       'а':'a','А':'a','е':'e','Е':'e','о':'o','О':'o',
       'р':'p','Р':'p','с':'c','С':'c','х':'x','Х':'x',
@@ -52,16 +46,9 @@
       'ο':'o','Ο':'o','ι':'i','Ι':'i','ν':'v','Ν':'v',
       'χ':'x','Χ':'x','ρ':'p','Ρ':'p'
     };
-
     let out = '';
-    for (const c of str) {
-      out += map[c] || c;
-    }
-
-    return out
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    for (const c of str) out += map[c] || c;
+    return out.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
   }
 
   function updateWords(newWords) {
@@ -170,321 +157,277 @@
     }
   }
 
-  // --- SHADOW-DOM UI ---
+  // --- UI CREATION (DIRECT BODY MOUNT) ---
   function initUI() {
     if (document.getElementById('__ad_remover_ui_host__')) return;
 
     const host = document.createElement('div');
     host.id = '__ad_remover_ui_host__';
-    host.style.position = 'fixed';
-    host.style.inset = '0';
-    host.style.pointerEvents = 'none';
-    host.style.zIndex = '2147483647';
 
     const shadow = host.attachShadow({ mode: 'open' });
 
     shadow.innerHTML = `
       <style>
+        :host {
+          all: initial;
+          position: static;
+        }
         * {
           box-sizing: border-box;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        .fab-button {
-          pointer-events: auto;
-          position: fixed;
-          bottom: 24px;
-          right: 24px;
-          width: 52px;
-          height: 52px;
-          border-radius: 50%;
-          background: rgba(30, 41, 59, 0.85);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(59, 130, 246, 0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: grab;
-          user-select: none;
-          touch-action: none;
+        .fab {
+          position: fixed !important;
+          bottom: 30px !important;
+          right: 25px !important;
+          width: 55px !important;
+          height: 55px !important;
+          border-radius: 50% !important;
+          background: #1e293b !important;
+          background: rgba(30, 41, 59, 0.88) !important;
+          backdrop-filter: blur(12px) !important;
+          -webkit-backdrop-filter: blur(12px) !important;
+          border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(59, 130, 246, 0.35) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          cursor: pointer !important;
+          z-index: 2147483647 !important;
+          touch-action: none !important;
+          user-select: none !important;
         }
-        .fab-button:active { cursor: grabbing; }
-        .fab-button svg {
-          width: 24px;
-          height: 24px;
+        .fab svg {
+          width: 28px;
+          height: 28px;
           fill: none;
           stroke: #60a5fa;
-          stroke-width: 2;
+          stroke-width: 2.2;
           stroke-linecap: round;
           stroke-linejoin: round;
           pointer-events: none;
         }
-        .dialog-backdrop {
-          pointer-events: auto;
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          display: flex;
+        .backdrop {
+          display: none;
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          background: rgba(0, 0, 0, 0.65) !important;
+          backdrop-filter: blur(8px) !important;
+          -webkit-backdrop-filter: blur(8px) !important;
+          z-index: 2147483647 !important;
           align-items: center;
           justify-content: center;
           padding: 20px;
-          opacity: 0;
-          visibility: hidden;
-          transition: opacity 0.3s ease, visibility 0.3s;
         }
-        .dialog-backdrop.active { opacity: 1; visibility: visible; }
-        .dialog-box {
-          position: relative;
+        .backdrop.open {
+          display: flex !important;
+        }
+        .modal {
           width: 100%;
-          max-width: 360px;
-          background: rgba(18, 24, 38, 0.9);
-          backdrop-filter: blur(28px) saturate(190%);
-          -webkit-backdrop-filter: blur(28px) saturate(190%);
+          max-width: 350px;
+          background: rgba(15, 23, 42, 0.95);
+          backdrop-filter: blur(25px);
+          -webkit-backdrop-filter: blur(25px);
           border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 20px;
-          padding: 24px;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-          transform: scale(0.85);
-          transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+          padding: 22px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+          animation: pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .dialog-backdrop.active .dialog-box { transform: scale(1); }
-        .dialog-copyright {
+        @keyframes pop {
+          0% { transform: scale(0.85); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .cr {
           font-size: 11px;
           color: #64748b;
-          margin: 0 0 10px 0;
-          letter-spacing: 0.5px;
+          margin-bottom: 8px;
           text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
-        .dialog-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 6px;
-        }
-        .dialog-header svg {
-          width: 20px;
-          height: 20px;
-          stroke: #38bdf8;
-          stroke-width: 2;
-          fill: none;
-        }
-        .dialog-header h3 {
-          margin: 0;
+        .title {
+          margin: 0 0 6px 0;
           font-size: 17px;
           font-weight: 600;
           color: #f8fafc;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
-        .dialog-desc {
-          margin: 0 0 14px 0;
+        .title svg {
+          width: 18px;
+          height: 18px;
+          stroke: #38bdf8;
+          stroke-width: 2;
+        }
+        .desc {
+          margin: 0 0 12px 0;
           font-size: 13px;
           color: #94a3b8;
         }
         textarea {
           width: 100%;
-          height: 90px;
-          background: rgba(15, 23, 42, 0.7);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          padding: 12px;
-          color: #f1f5f9;
+          height: 85px;
+          background: rgba(30, 41, 59, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 10px;
+          padding: 10px;
+          color: #fff;
           font-size: 13px;
           resize: none;
           outline: none;
         }
         textarea:focus {
           border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
-        .action-row {
-          margin-top: 18px;
+        .btn-row {
+          margin-top: 15px;
           display: flex;
           justify-content: flex-end;
           gap: 10px;
         }
         button {
-          padding: 9px 18px;
-          border-radius: 10px;
+          padding: 8px 16px;
+          border-radius: 8px;
           font-size: 13px;
-          font-weight: 500;
           cursor: pointer;
           border: none;
+          font-weight: 500;
         }
-        .btn-close {
-          background: rgba(255, 255, 255, 0.08);
-          color: #cbd5e1;
-        }
-        .btn-save {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8);
-          color: #ffffff;
-        }
+        .btn-c { background: rgba(255, 255, 255, 0.1); color: #cbd5e1; }
+        .btn-s { background: #2563eb; color: #fff; }
       </style>
 
-      <div class="fab-button" id="fab">
+      <div class="fab" id="fab">
         <svg viewBox="0 0 24 24">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
           <path d="m9 12 2 2 4-4"></path>
         </svg>
       </div>
 
-      <div class="dialog-backdrop" id="backdrop">
-        <div class="dialog-box" id="dialogBox">
-          <div class="dialog-copyright">© 2026 @nice_osei • All Rights Reserved</div>
-          <div class="dialog-header">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-            <h3>Filter Keywords</h3>
+      <div class="backdrop" id="backdrop">
+        <div class="modal">
+          <div class="cr">© 2026 @nice_osei</div>
+          <div class="title">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            Filter Keywords
           </div>
-          <p class="dialog-desc">Enter words separated by comma (,):</p>
-          <textarea id="wordInput" placeholder="sponsored, ads, promoted..."></textarea>
-          <div class="action-row">
-            <button class="btn-close" id="closeBtn">Close</button>
-            <button class="btn-save" id="saveBtn">Save</button>
+          <p class="desc">Enter keywords separated by comma (,):</p>
+          <textarea id="inp" placeholder="sponsored, ads..."></textarea>
+          <div class="btn-row">
+            <button class="btn-c" id="closeBtn">Close</button>
+            <button class="btn-s" id="saveBtn">Save</button>
           </div>
         </div>
       </div>
     `;
 
-    const target = document.body || document.documentElement;
-    target.appendChild(host);
+    document.documentElement.appendChild(host);
 
     const fab = shadow.getElementById('fab');
     const backdrop = shadow.getElementById('backdrop');
-    const dialogBox = shadow.getElementById('dialogBox');
-    const textarea = shadow.getElementById('wordInput');
-    const saveBtn = shadow.getElementById('saveBtn');
+    const inp = shadow.getElementById('inp');
     const closeBtn = shadow.getElementById('closeBtn');
+    const saveBtn = shadow.getElementById('saveBtn');
 
     function openModal() {
-      textarea.value = WORDS.join(', ');
-      backdrop.classList.add('active');
+      inp.value = WORDS.join(', ');
+      backdrop.classList.add('open');
     }
-
     function closeModal() {
-      backdrop.classList.remove('active');
+      backdrop.classList.remove('open');
     }
 
     closeBtn.onclick = closeModal;
-    backdrop.onclick = (e) => {
-      if (e.target === backdrop) closeModal();
-    };
-    dialogBox.onclick = (e) => e.stopPropagation();
+    backdrop.onclick = (e) => { if (e.target === backdrop) closeModal(); };
 
-    saveBtn.onclick = function () {
-      const text = textarea.value;
-      const parsedArray = text
-        .split(',')
-        .map(w => w.trim())
-        .filter(w => w.length > 0);
-
-      const toSave = parsedArray.length > 0 ? parsedArray : DEFAULT_WORDS;
+    saveBtn.onclick = () => {
+      const parsed = inp.value.split(',').map(s => s.trim()).filter(Boolean);
+      const toSave = parsed.length > 0 ? parsed : DEFAULT_WORDS;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
       updateWords(toSave);
-
       closeModal();
       if (document.body) scan(document.body);
     };
 
-    // Drag Logic
-    let isDragging = false, startX = 0, startY = 0, initialLeft = 0, initialTop = 0, moved = false;
+    // Simple Drag & Click
+    let isDrag = false, sx = 0, sy = 0, il = 0, it = 0, moved = false;
 
-    fab.addEventListener('pointerdown', (e) => {
-      isDragging = true;
+    fab.onpointerdown = (e) => {
+      isDrag = true;
       moved = false;
-      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-      startX = clientX;
-      startY = clientY;
-
+      sx = e.clientX;
+      sy = e.clientY;
       const rect = fab.getBoundingClientRect();
-      initialLeft = rect.left;
-      initialTop = rect.top;
+      il = rect.left;
+      it = rect.top;
 
       fab.style.right = 'auto';
       fab.style.bottom = 'auto';
-      fab.style.left = initialLeft + 'px';
-      fab.style.top = initialTop + 'px';
+      fab.style.left = il + 'px';
+      fab.style.top = it + 'px';
 
-      const onMove = (ev) => {
-        if (!isDragging) return;
-        const cx = ev.clientX || (ev.touches && ev.touches[0].clientX);
-        const cy = ev.clientY || (ev.touches && ev.touches[0].clientY);
-        const dx = cx - startX;
-        const dy = cy - startY;
-
-        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
-
-        let nextX = initialLeft + dx;
-        let nextY = initialTop + dy;
-        const maxL = window.innerWidth - fab.offsetWidth - 10;
-        const maxT = window.innerHeight - fab.offsetHeight - 10;
-
-        fab.style.left = Math.max(10, Math.min(nextX, maxL)) + 'px';
-        fab.style.top = Math.max(10, Math.min(nextY, maxT)) + 'px';
+      const move = (ev) => {
+        if (!isDrag) return;
+        const dx = ev.clientX - sx;
+        const dy = ev.clientY - sy;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+        fab.style.left = Math.max(10, Math.min(il + dx, window.innerWidth - 65)) + 'px';
+        fab.style.top = Math.max(10, Math.min(it + dy, window.innerHeight - 65)) + 'px';
       };
 
-      const onUp = () => {
-        isDragging = false;
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
+      const up = () => {
+        isDrag = false;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
         if (!moved) openModal();
       };
 
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-    });
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    };
   }
 
-  // --- EXPORTED API ---
-  const AdBlocker = {
+  // --- CONTROLLER ---
+  return {
     init: function () {
       if (isInitialized) return;
       isInitialized = true;
+      console.log('[AdBlocker] Initialized manually.');
 
       updateWords(getSavedWords());
 
-      function startAll() {
+      const start = () => {
         initUI();
         if (document.body) scan(document.body);
 
-        loopTimer = setInterval(function () {
-          if (!document.getElementById('__ad_remover_ui_host__')) {
-            initUI();
-          }
+        setInterval(() => {
+          if (!document.getElementById('__ad_remover_ui_host__')) initUI();
           if (document.body) scan(document.body);
         }, 400);
 
-        let mutTimer = null;
-        observer = new MutationObserver(function (mutations) {
-          if (mutTimer) clearTimeout(mutTimer);
-          mutTimer = setTimeout(function () {
-            for (const mutation of mutations) {
-              for (const node of mutation.addedNodes) {
+        let t;
+        const obs = new MutationObserver((m) => {
+          clearTimeout(t);
+          t = setTimeout(() => {
+            for (const item of m) {
+              for (const node of item.addedNodes) {
                 if (node.nodeType === 1) scan(node);
               }
             }
           }, 30);
         });
-
-        observer.observe(document.documentElement, {
-          childList: true,
-          subtree: true
-        });
-      }
+        obs.observe(document.documentElement, { childList: true, subtree: true });
+      };
 
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', startAll, { once: true });
+        document.addEventListener('DOMContentLoaded', start, { once: true });
       } else {
-        startAll();
+        start();
       }
-    },
-    scan: function () {
-      if (document.body) scan(document.body);
     }
   };
-
-  return AdBlocker;
 });
