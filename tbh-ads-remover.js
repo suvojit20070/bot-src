@@ -1,19 +1,31 @@
-(function() {
-  'use strict';
-/*
+/*!
+ * AdRemover v1.0.0
  * © 2026 @nice_osei
- *
- * This script only removes advertisements from the user's screen
- * for a cleaner viewing experience and does not support or encourage
- * any illegal activity.
+ * Inspired by Eruda Architecture (UMD Module)
  */
-  if (!window.__AD_REMOVER__) {
-    window.__AD_REMOVER__ = {};
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    define([], factory);
+  } else if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.AdRemover = factory();
+    // Auto initialize just like standalone widgets
+    if (root.AdRemover && typeof root.AdRemover.init === 'function') {
+      root.AdRemover.init();
+    }
   }
-  console.log('[AD BLOCKER] Loaded by @nice_osei');
+})(typeof window !== 'undefined' ? window : this, function () {
+  'use strict';
 
   const STORAGE_KEY = '__AD_REMOVER_WORDS__';
-  const DEFAULT_WORDS = ["sроnsоrеd", "Sроnsоrеd", "SРОNSОRЕD"];
+  const DEFAULT_WORDS = ["sроnsоrеd", "Sроnsоrеd", "SРОNSОRЕD", "sponsored", "promoted"];
+
+  let isInitialized = false;
+  let WORDS = [];
+  let NORMALIZED_WORDS = [];
+  let observer = null;
+  let timer = null;
 
   function getSavedWords() {
     try {
@@ -26,39 +38,19 @@
     return DEFAULT_WORDS;
   }
 
-  let WORDS = getSavedWords();
-
-  // Unicode/look-alike characters normalize
   function normalize(str) {
     if (!str) return '';
     str = String(str).normalize('NFKC').toLowerCase();
 
-    // Common Cyrillic/Greek look-alikes
     const map = {
-      'а':'a','А':'a',
-      'е':'e','Е':'e',
-      'о':'o','О':'o',
-      'р':'p','Р':'p',
-      'с':'c','С':'c',
-      'х':'x','Х':'x',
-      'у':'y','У':'y',
-      'і':'i','І':'i',
-      'ј':'j','Ј':'j',
-      'ѕ':'s','Ѕ':'s',
-      'ѵ':'v','Ѵ':'v',
-      'к':'k','К':'k',
-      'м':'m','М':'m',
-      'т':'t','Т':'t',
-      'в':'b','В':'b',
-      'н':'h','Н':'h',
-      'д':'d','Д':'d',
-      'г':'r','Г':'r',
-      'ј':'j','Ј':'j',
-      'ο':'o','Ο':'o',
-      'ι':'i','Ι':'i',
-      'ν':'v','Ν':'v',
-      'χ':'x','Χ':'x',
-      'ρ':'p','Ρ':'p'
+      'а':'a','А':'a','е':'e','Е':'e','о':'o','О':'o',
+      'р':'p','Р':'p','с':'c','С':'c','х':'x','Х':'x',
+      'у':'y','У':'y','і':'i','І':'i','ј':'j','Ј':'j',
+      'ѕ':'s','Ѕ':'s','ѵ':'v','Ѵ':'v','к':'k','К':'k',
+      'м':'m','М':'m','т':'t','Т':'t','в':'b','В':'b',
+      'н':'h','Н':'h','д':'d','Д':'d','г':'r','Г':'r',
+      'ο':'o','Ο':'o','ι':'i','Ι':'i','ν':'v','Ν':'v',
+      'χ':'x','Χ':'x','ρ':'p','Ρ':'p'
     };
 
     let out = '';
@@ -72,32 +64,26 @@
       .trim();
   }
 
-  let NORMALIZED_WORDS = WORDS
-    .map(normalize)
-    .filter(Boolean);
+  function updateWords(newWords) {
+    WORDS = newWords && newWords.length > 0 ? newWords : DEFAULT_WORDS;
+    NORMALIZED_WORDS = WORDS.map(normalize).filter(Boolean);
+  }
 
   function matches(text) {
     const value = normalize(text);
     if (!value) return 0;
-
     let count = 0;
-
     for (const word of NORMALIZED_WORDS) {
       if (value.includes(word)) count++;
     }
-
     return count;
   }
 
   function hideElement(el) {
-    if (!el || el === document.body || el === document.documentElement) {
-      return;
-    }
+    if (!el || el === document.body || el === document.documentElement) return;
+    if (el.dataset && el.dataset.__adRemoved === '1') return;
 
-    if (el.dataset.__adRemoved === '1') return;
-
-    el.dataset.__adRemoved = '1';
-
+    if (el.dataset) el.dataset.__adRemoved = '1';
     el.style.setProperty('display', 'none', 'important');
     el.style.setProperty('visibility', 'hidden', 'important');
     el.style.setProperty('height', '0', 'important');
@@ -113,10 +99,7 @@
     let bestScore = 0;
 
     for (let level = 0; current && level < 8; level++) {
-
-      if (current === document.body || current === document.documentElement) {
-        break;
-      }
+      if (current === document.body || current === document.documentElement) break;
 
       const text = current.innerText || current.textContent || '';
       const count = matches(text);
@@ -124,14 +107,10 @@
       if (count >= 2) {
         const rect = current.getBoundingClientRect();
         const area = Math.max(1, rect.width * rect.height);
-
         let score = count * 100;
 
-        // Prefer visible reasonable-sized containers
         if (rect.width > 100 && rect.height > 50) score += 20;
         if (area < window.innerWidth * window.innerHeight * 0.9) score += 10;
-
-        // Prefer containers containing images/buttons
         if (current.querySelector('img')) score += 15;
         if (current.querySelector('button,a')) score += 10;
 
@@ -140,22 +119,18 @@
           bestScore = score;
         }
       }
-
       current = current.parentElement;
     }
-
     return best;
   }
 
   function scan(root) {
     if (!root) return;
-
     if (root.id === '__ad_remover_ui_host__' || (root.closest && root.closest('#__ad_remover_ui_host__'))) {
       return;
     }
 
     const elements = [];
-
     if (root.nodeType === 1) elements.push(root);
 
     if (root.querySelectorAll) {
@@ -165,33 +140,28 @@
     }
 
     const candidates = [];
-
     const seen = new Set();
 
     for (const el of elements) {
       if (!el || seen.has(el)) continue;
       seen.add(el);
 
-      if (el.dataset.__adRemoved === '1') continue;
+      if (el.dataset && el.dataset.__adRemoved === '1') continue;
 
       const text = el.innerText || el.textContent || '';
       if (!text.trim()) continue;
 
       const count = matches(text);
-
-      // At least one ad word must match
       if (count > 0) {
-        candidates.push({el: el, count: count});
+        candidates.push({ el: el, count: count });
       }
     }
 
     for (const candidate of candidates) {
       const el = candidate.el;
-
       if (!el.isConnected) continue;
 
       const container = findBestContainer(el);
-
       if (container && container !== document.body) {
         hideElement(container);
       } else {
@@ -200,7 +170,7 @@
     }
   }
 
-  // --- DRAGGABLE FLOATING ICON & GLASS DIALOG UI ---
+  // --- ERUDA STYLE SHADOW-DOM UI ---
   function initUI() {
     if (document.getElementById('__ad_remover_ui_host__')) return;
 
@@ -217,14 +187,14 @@
       <style>
         * {
           box-sizing: border-box;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         .fab-button {
           pointer-events: auto;
           position: fixed;
-          bottom: 30px;
-          right: 20px;
+          bottom: 24px;
+          right: 24px;
           width: 52px;
           height: 52px;
           border-radius: 50%;
@@ -283,7 +253,7 @@
           position: relative;
           width: 100%;
           max-width: 360px;
-          background: rgba(18, 24, 38, 0.88);
+          background: rgba(18, 24, 38, 0.9);
           backdrop-filter: blur(28px) saturate(190%);
           -webkit-backdrop-filter: blur(28px) saturate(190%);
           border: 1px solid rgba(255, 255, 255, 0.15);
@@ -339,7 +309,7 @@
         textarea {
           width: 100%;
           height: 90px;
-          background: rgba(15, 23, 42, 0.6);
+          background: rgba(15, 23, 42, 0.7);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 12px;
           padding: 12px;
@@ -427,8 +397,10 @@
       </div>
     `;
 
-    // documentElement-এ ইনজেক্ট করা নিশ্চিত করে যে SPA বা বডি পরিবর্তন হলেও UI মুছবে না
-    (document.documentElement || document.body).appendChild(host);
+    const targetContainer = document.body || document.documentElement;
+    if (targetContainer) {
+      targetContainer.appendChild(host);
+    }
 
     const fab = shadow.getElementById('fab');
     const backdrop = shadow.getElementById('backdrop');
@@ -456,23 +428,22 @@
       e.stopPropagation();
     };
 
-    saveBtn.onclick = function() {
+    saveBtn.onclick = function () {
       const text = textarea.value;
       const parsedArray = text
         .split(',')
         .map(w => w.trim())
         .filter(w => w.length > 0);
 
-      WORDS = parsedArray.length > 0 ? parsedArray : DEFAULT_WORDS;
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(WORDS));
-      NORMALIZED_WORDS = WORDS.map(normalize).filter(Boolean);
+      const toSave = parsedArray.length > 0 ? parsedArray : DEFAULT_WORDS;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      updateWords(toSave);
 
       closeModal();
-      scan(document.body);
+      if (document.body) scan(document.body);
     };
 
-    // --- DRAG & TOUCH LOGIC ---
+    // Drag / Touch Movement
     let isDragging = false;
     let startX = 0;
     let startY = 0;
@@ -544,47 +515,55 @@
     fab.addEventListener('pointerdown', onPointerDown);
   }
 
-  function start() {
-    initUI();
-    scan(document.body);
+  // Eruda Lifecycle Style
+  const AdRemover = {
+    init: function () {
+      if (isInitialized) return;
+      isInitialized = true;
 
-    // UI কোনো কারণে মুছে গেলে তা ফিরিয়ে আনার চেক
-    setInterval(function() {
-      if (!document.getElementById('__ad_remover_ui_host__')) {
+      updateWords(getSavedWords());
+
+      function run() {
         initUI();
-      }
-      scan(document.body);
-    }, 400);
+        if (document.body) scan(document.body);
 
-    if (window.__AD_REMOVER__.observer) {
-      window.__AD_REMOVER__.observer.disconnect();
-    }
-
-    let timer = null;
-
-    window.__AD_REMOVER__.observer = new MutationObserver(function(mutations) {
-      if (timer) clearTimeout(timer);
-
-      timer = setTimeout(function() {
-        for (const mutation of mutations) {
-          for (const node of mutation.addedNodes) {
-            if (node.nodeType === 1) scan(node);
+        setInterval(function () {
+          if (!document.getElementById('__ad_remover_ui_host__')) {
+            initUI();
           }
-        }
-      }, 30);
-    });
+          if (document.body) scan(document.body);
+        }, 400);
 
-    window.__AD_REMOVER__.observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true
-    });
-  }
+        if (observer) observer.disconnect();
 
-  // রিমোট স্ক্রিপ্ট যখনই লোড হোক না কেন সাথে সাথে রান হবে
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, {once:true});
-  } else {
-    start();
-  }
+        observer = new MutationObserver(function (mutations) {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(function () {
+            for (const mutation of mutations) {
+              for (const node of mutation.addedNodes) {
+                if (node.nodeType === 1) scan(node);
+              }
+            }
+          }, 30);
+        });
 
-})();
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+      }
+
+      // Safe initialization whether loaded in <head>, <body> or via async CDN
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run, { once: true });
+      } else {
+        run();
+      }
+    },
+    scan: function () {
+      if (document.body) scan(document.body);
+    }
+  };
+
+  return AdRemover;
+});
