@@ -655,18 +655,19 @@
 
   let initialized = false;
 
-  window.adsblocker = {
-    init: function() {
-      if (initialized) return;
+  function init() {
+    if (initialized) return;
+    initialized = true;
 
-      initialized = true;
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', start, {once:true});
-      } else {
-        start();
-      }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start, {once:true});
+    } else {
+      start();
     }
+  }
+
+  window.adsblocker = {
+    init: init
   };
 
 })();
