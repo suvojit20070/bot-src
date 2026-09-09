@@ -207,6 +207,11 @@
     const host = document.createElement('div');
     host.id = '__ad_remover_ui_host__';
 
+    /*
+     * UI rendering fix:
+     * Keep the host completely independent from the page's
+     * normal layout and stacking contexts.
+     */
     host.style.setProperty('position', 'fixed', 'important');
     host.style.setProperty('left', '0', 'important');
     host.style.setProperty('top', '0', 'important');
