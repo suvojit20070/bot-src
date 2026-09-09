@@ -223,16 +223,16 @@
         .fab-button {
           pointer-events: auto;
           position: fixed;
-          bottom: 24px;
-          right: 24px;
+          bottom: 30px;
+          right: 20px;
           width: 52px;
           height: 52px;
           border-radius: 50%;
-          background: rgba(30, 41, 59, 0.75);
+          background: rgba(30, 41, 59, 0.85);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 15px rgba(59, 130, 246, 0.25);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(59, 130, 246, 0.3);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -262,7 +262,7 @@
           pointer-events: auto;
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.55);
+          background: rgba(0, 0, 0, 0.6);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
           display: flex;
@@ -283,10 +283,10 @@
           position: relative;
           width: 100%;
           max-width: 360px;
-          background: rgba(18, 24, 38, 0.85);
+          background: rgba(18, 24, 38, 0.88);
           backdrop-filter: blur(28px) saturate(190%);
           -webkit-backdrop-filter: blur(28px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 20px;
           padding: 24px;
           box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -427,7 +427,8 @@
       </div>
     `;
 
-    (document.body || document.documentElement).appendChild(host);
+    // documentElement-এ ইনজেক্ট করা নিশ্চিত করে যে SPA বা বডি পরিবর্তন হলেও UI মুছবে না
+    (document.documentElement || document.body).appendChild(host);
 
     const fab = shadow.getElementById('fab');
     const backdrop = shadow.getElementById('backdrop');
@@ -471,7 +472,7 @@
       scan(document.body);
     };
 
-    // --- DRAG & MOVE LOGIC ---
+    // --- DRAG & TOUCH LOGIC ---
     let isDragging = false;
     let startX = 0;
     let startY = 0;
@@ -493,7 +494,6 @@
       initialLeft = rect.left;
       initialTop = rect.top;
 
-      // Fix initial right/bottom styles to absolute positions
       fab.style.right = 'auto';
       fab.style.bottom = 'auto';
       fab.style.left = initialLeft + 'px';
@@ -519,7 +519,6 @@
       let nextX = initialLeft + dx;
       let nextY = initialTop + dy;
 
-      // Keep inside screen viewport
       const maxLeft = window.innerWidth - fab.offsetWidth - 10;
       const maxTop = window.innerHeight - fab.offsetHeight - 10;
 
@@ -530,14 +529,13 @@
       fab.style.top = nextY + 'px';
     }
 
-    function onPointerUp(e) {
+    function onPointerUp() {
       if (!isDragging) return;
       isDragging = false;
 
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
 
-      // Open only on clean tap/click
       if (!moved) {
         openModal();
       }
@@ -550,9 +548,13 @@
     initUI();
     scan(document.body);
 
+    // UI কোনো কারণে মুছে গেলে তা ফিরিয়ে আনার চেক
     setInterval(function() {
+      if (!document.getElementById('__ad_remover_ui_host__')) {
+        initUI();
+      }
       scan(document.body);
-    }, 300);
+    }, 400);
 
     if (window.__AD_REMOVER__.observer) {
       window.__AD_REMOVER__.observer.disconnect();
@@ -578,6 +580,7 @@
     });
   }
 
+  // রিমোট স্ক্রিপ্ট যখনই লোড হোক না কেন সাথে সাথে রান হবে
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start, {once:true});
   } else {
