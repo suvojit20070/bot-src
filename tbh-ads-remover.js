@@ -133,7 +133,6 @@
   }
 
   function scan(root) {
-    console.log('[AD BLOCKER] Loaded by @nice_osei');
     if (!root) return;
 
     const elements = [];
