@@ -53,6 +53,7 @@
       'н':'h','Н':'h',
       'д':'d','Д':'d',
       'г':'r','Г':'r',
+      'ј':'j','Ј':'j',
       'ο':'o','Ο':'o',
       'ι':'i','Ι':'i',
       'ν':'v','Ν':'v',
@@ -353,27 +354,17 @@
 
         .dialog-box {
           position: relative;
-
           width: 100%;
           max-width: 360px;
-
           background: rgba(18, 24, 38, 0.85);
           backdrop-filter: blur(28px) saturate(190%);
           -webkit-backdrop-filter: blur(28px) saturate(190%);
-
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 20px;
-
           padding: 24px;
-
-          box-shadow:
-            0 20px 50px rgba(0, 0, 0, 0.6),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
-
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
           transform: scale(0.85) translateY(20px);
-
-          transition:
-            transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+          transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
         }
 
         .dialog-backdrop.active .dialog-box {
@@ -493,31 +484,17 @@
       <div class="dialog-backdrop" id="backdrop">
         <div class="dialog-box" id="dialogBox">
           <div class="dialog-copyright">© 2026 @nice_osei • All Rights Reserved</div>
-
           <div class="dialog-header">
             <svg viewBox="0 0 24 24">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
             <h3>Filter Keywords</h3>
           </div>
-
-          <p class="dialog-desc">
-            Enter words separated by comma (,):
-          </p>
-
-          <textarea
-            id="wordInput"
-            placeholder="sponsored, ads, promoted..."
-          ></textarea>
-
+          <p class="dialog-desc">Enter words separated by comma (,):</p>
+          <textarea id="wordInput" placeholder="sponsored, ads, promoted..."></textarea>
           <div class="action-row">
-            <button class="btn-close" id="closeBtn">
-              Close
-            </button>
-
-            <button class="btn-save" id="saveBtn">
-              Save
-            </button>
+            <button class="btn-close" id="closeBtn">Close</button>
+            <button class="btn-save" id="saveBtn">Save</button>
           </div>
         </div>
       </div>
@@ -559,18 +536,10 @@
         .map(w => w.trim())
         .filter(w => w.length > 0);
 
-      WORDS = parsedArray.length > 0
-        ? parsedArray
-        : DEFAULT_WORDS;
+      WORDS = parsedArray.length > 0 ? parsedArray : DEFAULT_WORDS;
 
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(WORDS)
-      );
-
-      NORMALIZED_WORDS = WORDS
-        .map(normalize)
-        .filter(Boolean);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(WORDS));
+      NORMALIZED_WORDS = WORDS.map(normalize).filter(Boolean);
 
       closeModal();
       scan(document.body);
@@ -588,19 +557,13 @@
       isDragging = true;
       moved = false;
 
-      const clientX =
-        e.clientX ||
-        (e.touches && e.touches[0].clientX);
-
-      const clientY =
-        e.clientY ||
-        (e.touches && e.touches[0].clientY);
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
 
       startX = clientX;
       startY = clientY;
 
       const rect = fab.getBoundingClientRect();
-
       initialLeft = rect.left;
       initialTop = rect.top;
 
@@ -610,27 +573,15 @@
       fab.style.left = initialLeft + 'px';
       fab.style.top = initialTop + 'px';
 
-      window.addEventListener(
-        'pointermove',
-        onPointerMove
-      );
-
-      window.addEventListener(
-        'pointerup',
-        onPointerUp
-      );
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
     }
 
     function onPointerMove(e) {
       if (!isDragging) return;
 
-      const clientX =
-        e.clientX ||
-        (e.touches && e.touches[0].clientX);
-
-      const clientY =
-        e.clientY ||
-        (e.touches && e.touches[0].clientY);
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
 
       const dx = clientX - startX;
       const dy = clientY - startY;
@@ -643,25 +594,11 @@
       let nextY = initialTop + dy;
 
       // Keep inside screen viewport
-      const maxLeft =
-        window.innerWidth -
-        fab.offsetWidth -
-        10;
+      const maxLeft = window.innerWidth - fab.offsetWidth - 10;
+      const maxTop = window.innerHeight - fab.offsetHeight - 10;
 
-      const maxTop =
-        window.innerHeight -
-        fab.offsetHeight -
-        10;
-
-      nextX = Math.max(
-        10,
-        Math.min(nextX, maxLeft)
-      );
-
-      nextY = Math.max(
-        10,
-        Math.min(nextY, maxTop)
-      );
+      nextX = Math.max(10, Math.min(nextX, maxLeft));
+      nextY = Math.max(10, Math.min(nextY, maxTop));
 
       fab.style.left = nextX + 'px';
       fab.style.top = nextY + 'px';
@@ -672,15 +609,8 @@
 
       isDragging = false;
 
-      window.removeEventListener(
-        'pointermove',
-        onPointerMove
-      );
-
-      window.removeEventListener(
-        'pointerup',
-        onPointerUp
-      );
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
 
       // Open only on clean tap/click
       if (!moved) {
@@ -688,10 +618,7 @@
       }
     }
 
-    fab.addEventListener(
-      'pointerdown',
-      onPointerDown
-    );
+    fab.addEventListener('pointerdown', onPointerDown);
   }
 
   function start() {
@@ -708,50 +635,38 @@
 
     let timer = null;
 
-    window.__AD_REMOVER__.observer =
-      new MutationObserver(function(mutations) {
+    window.__AD_REMOVER__.observer = new MutationObserver(function(mutations) {
+      if (timer) clearTimeout(timer);
 
-        if (timer) clearTimeout(timer);
-
-        timer = setTimeout(function() {
-
-          for (const mutation of mutations) {
-
-            for (const node of mutation.addedNodes) {
-
-              if (node.nodeType === 1) {
-                scan(node);
-              }
-
-            }
-
+      timer = setTimeout(function() {
+        for (const mutation of mutations) {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === 1) scan(node);
           }
+        }
+      }, 30);
+    });
 
-        }, 30);
+    window.__AD_REMOVER__.observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  }
 
-      });
+  let initialized = false;
 
-    window.__AD_REMOVER__.observer.observe(
-      document.documentElement,
-      {
-        childList: true,
-        subtree: true
+  window.adsblocker = {
+    init: function() {
+      if (initialized) return;
+
+      initialized = true;
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start, {once:true});
+      } else {
+        start();
       }
-    );
-  }
-
-  if (document.readyState === 'loading') {
-
-    document.addEventListener(
-      'DOMContentLoaded',
-      start,
-      {once:true}
-    );
-
-  } else {
-
-    start();
-
-  }
+    }
+  };
 
 })();
