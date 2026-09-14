@@ -455,7 +455,6 @@
       if (isBlockerActive && document.body) scan(document.body);
     };
 
-    // Drag Logic (Safe with Click Protection)
     let isDrag = false, sx = 0, sy = 0, il = 0, it = 0, moved = false;
 
     fab.onpointerdown = (e) => {
@@ -493,7 +492,6 @@
     };
   }
 
-  // কন্ট্রোলার অবজেক্ট
   global.adsblocker = {
     init: function () {
       if (isRunning) return;
@@ -535,6 +533,3 @@
   };
 
 })(typeof window !== 'undefined' ? window : this);
-
-
-Iske andar jo ads block karne bala script he usko remove karke vo jaga ek comment karke pura code likhe ke do
