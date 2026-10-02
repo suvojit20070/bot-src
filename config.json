@@ -19,7 +19,6 @@
       "buttonText": "Check Status",
       "url": "https://status.telebothost.com",
       "showButton": true,
-      "dismissible": false
     },
     "notice": [
       {
@@ -28,23 +27,16 @@
         "message": "Host and manage your Telegram bots with high performance, zero downtime, and instant webhook updates.",
         "buttonText": "ok",
         "url": "tbh://app.com/profile",
-        "class": "",
-        "package": "",
-        "path": "",
-        "clickAction": "url",
         "icon": "",
         "image": "https://cdn.jsdelivr.net/gh/suvojit20070/bot-src@main/logo.png",
-        "type": "dialog",
+        "type": "bottomsheet",
         "priority": 1,
         "dismissible": true,
         "showOnce": true,
-        "showButton": true,
         "autoClose": true,
         "autoCloseDelay": 3000,
         "startTime": "2026-01-01T00:00:00",
-        "endTime": "2026-12-31T23:59:59",
-        "minVersionCode": 1,
-        "maxVersionCode": 0
+        "endTime": "2026-12-31T23:59:59"
       }
     ]
   }
