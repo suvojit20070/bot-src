@@ -8,9 +8,9 @@
       "message": "A new version of TelebotHost is available with performance improvements and bug fixes.",
       "buttonText": "Update Now",
       "url": "https://telebothost.com/download/app-v1.1.0.apk",
-      "force": false,
+      "force": true,
       "showOnce": false,
-      "dismissible": true
+      "dismissible": false
     },
     "maintenance": {
       "enabled": false,
@@ -32,8 +32,8 @@
         "type": "bottomsheet",
         "priority": 1,
         "dismissible": true,
-        "showOnce": false,
-        "autoClose": true,
+        "showOnce": true,
+        "autoClose": false,
         "autoCloseDelay": 3000,
         "startTime": "2026-01-01T00:00:00",
         "endTime": "2026-12-31T23:59:59"
