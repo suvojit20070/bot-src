@@ -44,7 +44,7 @@
         "title": "TBL Helper AI — Beta Version",
         "message": "TBL Helper AI is currently available in Beta. Some features may be unstable, incomplete, or produce unexpected results Please do not test it on your main/production bots. We recommend using a test bot while trying the AI features. Everyone is welcome to try TBL Helper AI and share their feedback, bugs, suggestions, or improvement ideas. Your feedback will help us improve the AI before the stable release.",
         "buttonText": "Try Now",
-        "url": "tbh://ai",
+        "url": "tbh://app.ai/",
         "icon": "https://cdn.jsdelivr.net/gh/suvojit20070/bot-src@main/logo.png",
         "image": "",
         "type": "bottomsheet",
