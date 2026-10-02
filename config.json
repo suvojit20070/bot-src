@@ -1,7 +1,7 @@
 {
   "telebothost.com.app": {
     "update": {
-      "enabled": false,
+      "enabled": true,
       "versionCode": 2,
       "versionName": "1.1.0",
       "title": "Update Available",
@@ -44,30 +44,6 @@
         "startTime": "2026-01-01T00:00:00",
         "endTime": "2026-12-31T23:59:59",
         "minVersionCode": 1,
-        "maxVersionCode": 0
-      },
-      {
-        "id": "notice_broadcast_tips_dialog",
-        "title": "New Broadcast Feature",
-        "message": "Now you can broadcast photos, videos, and documents with silent mode and content protection directly to all bot chats.",
-        "buttonText": "Open App",
-        "url": "",
-        "class": "telebothost.com.app.MainActivity",
-        "package": "telebothost.com.app",
-        "path": "",
-        "clickAction": "activity",
-        "icon": "",
-        "image": "",
-        "type": "dialog",
-        "priority": 2,
-        "dismissible": true,
-        "showOnce": false,
-        "showButton": true,
-        "autoClose": true,
-        "autoCloseDelay": 10,
-        "startTime": "",
-        "endTime": "",
-        "minVersionCode": 0,
         "maxVersionCode": 0
       }
     ]
