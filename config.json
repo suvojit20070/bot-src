@@ -18,7 +18,7 @@
       "message": "We are currently upgrading our cloud infrastructure. The app will be accessible again shortly.",
       "buttonText": "Check Status",
       "url": "https://status.telebothost.com",
-      "showButton": true,
+      "showButton": true
     },
     "notice": [
       {
