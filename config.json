@@ -10,7 +10,8 @@
       "url": "https://telebothost.com/download/app-v1.1.0.apk",
       "force": true,
       "showOnce": false,
-      "dismissible": false
+      "dismissible": false,
+      "icon": "https://cdn.jsdelivr.net/gh/suvojit20070/bot-src@main/logo.png"
     },
     "maintenance": {
       "enabled": false,
@@ -26,9 +27,9 @@
         "title": "Welcome to TelebotHost!",
         "message": "Host and manage your Telegram bots with high performance, zero downtime, and instant webhook updates.",
         "buttonText": "ok",
-        "url": "tbh://app.com/profile",
-        "icon": "",
-        "image": "https://cdn.jsdelivr.net/gh/suvojit20070/bot-src@main/logo.png",
+        "url": "",
+        "icon": "https://cdn.jsdelivr.net/gh/suvojit20070/bot-src@main/logo.png",
+        "image": "",
         "type": "bottomsheet",
         "priority": 1,
         "dismissible": true,
