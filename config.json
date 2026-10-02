@@ -1,0 +1,75 @@
+{
+  "telebothost.com.app": {
+    "update": {
+      "enabled": false,
+      "versionCode": 2,
+      "versionName": "1.1.0",
+      "title": "Update Available",
+      "message": "A new version of TelebotHost is available with performance improvements and bug fixes.",
+      "buttonText": "Update Now",
+      "url": "https://telebothost.com/download/app-v1.1.0.apk",
+      "force": false,
+      "showOnce": true,
+      "dismissible": true
+    },
+    "maintenance": {
+      "enabled": false,
+      "title": "Server Maintenance",
+      "message": "We are currently upgrading our cloud infrastructure. The app will be accessible again shortly.",
+      "buttonText": "Check Status",
+      "url": "https://status.telebothost.com",
+      "showButton": true,
+      "dismissible": false
+    },
+    "notice": [
+      {
+        "id": "notice_welcome_bottomsheet",
+        "title": "Welcome to TelebotHost!",
+        "message": "Host and manage your Telegram bots with high performance, zero downtime, and instant webhook updates.",
+        "buttonText": "Learn More",
+        "url": "https://telebothost.com/docs",
+        "class": "",
+        "package": "",
+        "path": "",
+        "clickAction": "url",
+        "icon": "",
+        "image": "",
+        "type": "bottomsheet",
+        "priority": 1,
+        "dismissible": true,
+        "showOnce": true,
+        "showButton": true,
+        "autoClose": false,
+        "autoCloseDelay": 0,
+        "startTime": "2026-01-01T00:00:00",
+        "endTime": "2026-12-31T23:59:59",
+        "minVersionCode": 1,
+        "maxVersionCode": 0
+      },
+      {
+        "id": "notice_broadcast_tips_dialog",
+        "title": "New Broadcast Feature",
+        "message": "Now you can broadcast photos, videos, and documents with silent mode and content protection directly to all bot chats.",
+        "buttonText": "Open App",
+        "url": "",
+        "class": "telebothost.com.app.MainActivity",
+        "package": "telebothost.com.app",
+        "path": "",
+        "clickAction": "activity",
+        "icon": "",
+        "image": "",
+        "type": "dialog",
+        "priority": 2,
+        "dismissible": true,
+        "showOnce": false,
+        "showButton": true,
+        "autoClose": true,
+        "autoCloseDelay": 10,
+        "startTime": "",
+        "endTime": "",
+        "minVersionCode": 0,
+        "maxVersionCode": 0
+      }
+    ]
+  }
+}
