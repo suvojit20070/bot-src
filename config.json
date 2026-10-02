@@ -3,7 +3,7 @@
     "update": {
       "enabled": true,
       "versionCode": 1,
-      "versionName": "1.1.0",
+      "versionName": "1.1.1",
       "title": "Update Available",
       "message": "A new version of TelebotHost is available with performance improvements and bug fixes.",
       "buttonText": "Update Now",
