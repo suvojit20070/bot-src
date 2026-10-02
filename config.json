@@ -9,7 +9,7 @@
       "buttonText": "Update Now",
       "url": "https://telebothost.com/download/app-v1.1.0.apk",
       "force": false,
-      "showOnce": true,
+      "showOnce": false,
       "dismissible": true
     },
     "maintenance": {
