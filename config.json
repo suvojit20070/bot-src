@@ -3,11 +3,11 @@
     "update": {
       "enabled": true,
       "versionCode": 1,
-      "versionName": "1.2",
+      "versionName": "1.3",
       "title": "Update Available",
       "message": "A new version of TelebotHost is available with Ai",
       "buttonText": "Update Now",
-      "url": "https://t.me/update_chat/124656",
+      "url": "https://t.me/update_chat/125248",
       "force": true,
       "showOnce": false,
       "dismissible": false,
