@@ -23,23 +23,6 @@
     },
     "notice": [
       {
-        "id": "notice_welcome",
-        "title": "Welcome to TelebotHost!",
-        "message": "Host and manage your Telegram bots with high performance, zero downtime, and instant webhook updates.",
-        "buttonText": "ok",
-        "url": "",
-        "icon": "https://cdn.jsdelivr.net/gh/suvojit20070/bot-src@main/logo.png",
-        "image": "",
-        "type": "bottomsheet",
-        "priority": 1,
-        "dismissible": true,
-        "showOnce": true,
-        "autoClose": false,
-        "autoCloseDelay": 3000,
-        "startTime": "2026-01-01T00:00:00",
-        "endTime": "2026-12-31T23:59:59"
-      },
-      {
         "id": "notice_new_ai",
         "title": "TBL Helper AI — Beta Version",
         "message": "TBL Helper AI is currently available in Beta. Some features may be unstable, incomplete, or produce unexpected results Please do not test it on your main/production bots. We recommend using a test bot while trying the AI features. Everyone is welcome to try TBL Helper AI and share their feedback, bugs, suggestions, or improvement ideas. Your feedback will help us improve the AI before the stable release.",
